@@ -11,8 +11,12 @@ import (
 	"gopkg.in/mcuadros/go-syslog.v2"
 )
 
+// RequestKeyMessage used to extract the message from the metadata.
+const RequestKeyMessage = "message"
+
 var (
-	cliPort = kingpin.Flag("Port which will receive requests", "Verbose mode.").Short('p').Default(":514").String()
+	cliPort  = kingpin.Flag("port", "Port which will receive requests").Short('p').Default(":514").String()
+	cliDebug = kingpin.Flag("debug", "Turns on debugging").Short('d').Bool()
 )
 
 func main() {
@@ -27,7 +31,7 @@ func main() {
 
 	err := server.ListenUDP(*cliPort)
 	if err != nil {
-			panic(err)
+		panic(err)
 	}
 
 	fmt.Println("Starting server")
@@ -38,9 +42,14 @@ func main() {
 	}
 
 	go func(channel syslog.LogPartsChannel) {
-		for logParts := range channel {
-			if val, ok := logParts["content"]; ok {
-				fmt.Println(val)
+		for req := range channel {
+			if *cliDebug {
+				fmt.Println(req)
+				continue
+			}
+
+			if message, ok := req[RequestKeyMessage]; ok {
+				fmt.Println(message)
 			}
 		}
 	}(channel)
